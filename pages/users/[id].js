@@ -1,6 +1,7 @@
 import React from 'react';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
+import Link from 'next/link'
 
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
@@ -159,7 +160,7 @@ export default function UserDetail() {
                     </Paper>
                     <Button variant="contained" startIcon={<PhotoCamera />} disableElevation>เปลี่ยนรูปโปรไฟล์</Button>
                 </Grid>
-                <Grid item xs={12} lg={10}>
+                <Grid item flexGrow={1}>
                     <Grid container spacing={3}>
                         <Grid item xs={6} sm={4} lg={3}>
                             <BoxInfo
@@ -172,14 +173,14 @@ export default function UserDetail() {
                             <BoxInfo
                                 title={"น้ำหนัก"}
                                 value={54}
-                                unit={"กิโลกรัม"}
+                                unit={"kg"}
                             />
                         </Grid>
                         <Grid item xs={6} sm={4} lg={3}>
                             <BoxInfo
                                 title={"ส่วนสูง"}
                                 value={176}
-                                unit={"เซ็นติเมตร"}
+                                unit={"cm"}
                             />
                         </Grid>
                     </Grid>
@@ -226,7 +227,13 @@ export default function UserDetail() {
                             </Grid>
                         </Grid>
                         <Grid item>
-                            <Button variant="contained" endIcon={<SendIcon />}>บันทึกและเริ่ม</Button>
+                            <Link href={"/control"} passHref>
+                                <Button 
+                                    variant="contained" 
+                                    endIcon={<SendIcon />}
+                                    component="a"
+                                >บันทึกและเริ่ม</Button>
+                            </Link>
                         </Grid>
                     </Grid>}
                     {tap == 1 && <Grid container spacing={3} p={3}>

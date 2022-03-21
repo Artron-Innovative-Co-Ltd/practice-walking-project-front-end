@@ -1,125 +1,53 @@
 .contener {
-    background-color: #222836;
-    height: 100vh;
-
-    & > * {
-        box-sizing: border-box;
-    }
-}
-
-.topStatus {
-    padding: 1%;
-    height: 50vh;
-
-    & > div {
-        background-color: #353c4e;
-        height: 100%;
-        border-radius: 3px;
-        display: flex;
-        flex-direction: row;
-        box-shadow: 0 0 0 1px rgb(255 255 255 / 18%);
-        flex-grow: 1;
-        overflow: hidden;
-
-        & > div:first-child,
-        & > div:last-child {
-            width: 30%;
-        }
-
-        
-        & > div:nth-child(2) {
-            width: 40%;
-            position: relative;
-        }
-
-        & ul {
-            padding: 0;
-            margin: 0;
-            height: 100%;
-            padding: 0 8%;
-
-            & > li {
-                list-style: none;
-                padding: 0;
-                display: flex;
-                flex-direction: row;
-                align-items: center;
-                color: #FFF;
-                height: calc(50% - 1px);
-                border-bottom: 1px #494f5f solid;
-                
-                &:last-child {
-                    border-bottom: none;
-                }
-
-                & > div:first-child {
-                    width: 20%;
-
-                    & svg {
-                        fill: #FFF;
-                        width: 100%;
-                        height: auto;
-                    }
-                }
-
-                & > div:nth-child(2) {
-                    font-size: 3vw;
-                    text-align: center;
-                    flex-grow: 1;
-                }
-
-                & > div:nth-child(3) {
-                    font-size: 2vw;
-                    width: 20%;
-                    text-align: left;
-                }
-            }
-        }
-    }
-}
-
-.circleCenter {
-    width: 34vw;
-    height: 34vw;
-    border-radius: 9999999px;
-    border: 1px solid #FFF;
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background-color: #353c4e;
-    box-shadow: 0 0 40px 20px rgb(0 0 0 / 28%);
     display: flex;
-    flex-direction: row;
     align-items: center;
     justify-content: center;
+    height: 100vh;
+    background-color: rgb(231, 235, 240);
+}
 
-    & > .processBar {
-        position: absolute;
+.formPassword {
+    .topLogo {
+        display: flex;
+        justify-content: center;
+        padding-top: 20px;
     }
 
-    & > .processContent {
-        text-align: center;
-
-        & > .processText {
-            & > span:first-child {
-                font-size: 14vh;
-                color: #FFF;
-            }
-
-            & > span:last-child {
-                font-size: 6vh;
-                color: #7d828d;
-                margin-left: 10px;
-            }
-        }
-
-        & > .processTime {
-            text-align: center;
-            font-size: 4vh;
-            color: #FFF;
+    .boxPassword {
+        display: flex;
+        flex-direction: row;
+        justify-content: center;
+        
+        & > div {
+            display: flex;
+            padding: 0 10px;
         }
     }
 
+    .boxButton {
+        display: flex;
+        flex-direction: row;
+        justify-content: center;
 
+        &:first-child > div {
+            padding-top: 0;
+        }
+
+        & > div {
+            padding: 6px 10px;
+        }
+    }
+
+    .boxCharPassword {
+        border: 1px solid #9d9d9d;
+        border-radius: 6px;
+        padding: 6px;
+        font-size: 28px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 46px;
+        color: #584f4f;
+    }
 }

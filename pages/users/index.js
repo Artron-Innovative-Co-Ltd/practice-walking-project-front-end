@@ -9,15 +9,31 @@ import CardMedia from '@mui/material/CardMedia';
 import CardActionArea from '@mui/material/CardActionArea';
 import Typography from '@mui/material/Typography';
 import Grid from '@mui/material/Grid';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogContentText from '@mui/material/DialogContentText';
+import DialogTitle from '@mui/material/DialogTitle';
+import TextField from '@mui/material/TextField';
+import Button from '@mui/material/Button';
 
 import AppBarCustom from '../../src/AppBarCustom';
 
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 
+const TextFieldCustom = props => <TextField
+    variant="outlined"
+    InputLabelProps={{
+        shrink: true,
+    }}
+    sx={{ width: "100%" }}
+    {...props}
+/>;
+
 export default function Users() {
     return (
         <>
-            <AppBarCustom 
+            <AppBarCustom
                 title={"รายชื่อ"}
                 backLink={"/"}
             />
@@ -54,6 +70,44 @@ export default function Users() {
                     </Card>
                 </Grid>
             </Grid>
+
+
+            <Dialog
+                fullWidth={true}
+                maxWidth={"sm"}
+                open={true}
+                onClose={() => 1}
+            >
+                <DialogTitle>เพิ่มผู้ใช้ใหม่</DialogTitle>
+                <DialogContent>
+                    <Box pt={3}>
+                        <TextFieldCustom
+                            label="ชื่อ-นามสกุล"
+                            type="text"
+                        />
+                    </Box>
+                    <Box pt={3}>
+                        <Grid container spacing={3}>
+                            <Grid item xs={6}>
+                                <TextFieldCustom
+                                    label="วัน เดือน ปีเกิด"
+                                    type="datetime-local"
+                                />
+                            </Grid>
+                            <Grid item xs={6}>
+                                <TextFieldCustom
+                                    label="ส่วนสูง"
+                                    type="number"
+                                />
+                            </Grid>
+                        </Grid>
+                    </Box>
+                </DialogContent>
+                <DialogActions>
+                    <Button variant="contained" onClick={() => 1} disableElevation>บันทึก</Button>
+                    <Button variant="text" onClick={() => 1}>ยกเลิก</Button>
+                </DialogActions>
+            </Dialog>
         </>
     );
 }
