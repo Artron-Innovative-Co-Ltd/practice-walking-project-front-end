@@ -2,6 +2,7 @@ import React from 'react';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import Link from 'next/link'
+import { useRouter } from 'next/router';
 
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
@@ -21,16 +22,23 @@ import ListItemAvatar from '@mui/material/ListItemAvatar';
 import ListSubheader from '@mui/material/ListSubheader';
 import Avatar from '@mui/material/Avatar';
 import Divider from '@mui/material/Divider';
+import IconButton from '@mui/material/IconButton';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogContentText from '@mui/material/DialogContentText';
+import DialogTitle from '@mui/material/DialogTitle';
 
 import PhotoCamera from '@mui/icons-material/PhotoCamera';
 import SendIcon from '@mui/icons-material/Send';
 import DashboardIcon from '@mui/icons-material/Dashboard';
+import EditIcon from '@mui/icons-material/Edit';
 
 const Chart = dynamic(() => import('react-apexcharts'), { ssr: false });
 
 import AppBarCustom from '../../src/AppBarCustom';
 import CalculateAge from '../../src/CalculateAge';
-
+import CallAPI from '../../src/WebCallAPI';
 
 function BoxInfo({ title, value, unit }) {
     return (
@@ -47,6 +55,8 @@ function BoxInfo({ title, value, unit }) {
 }
 
 export default function UserDetail({ userInfoFromServer, logInfoFromServer }) {
+    const router = useRouter();
+
     const [ userInfo, setUserInfo ] = React.useState(userInfoFromServer);
 
     const [tap, setTap] = React.useState(0);
@@ -142,10 +152,32 @@ export default function UserDetail({ userInfoFromServer, logInfoFromServer }) {
         },
     };
 
+    const [ showDeleteUserDialog, setShowDeleteUserDialog] = React.useState(false);
+    const handleCloseDeleteUserDialog = () => {
+        setShowDeleteUserDialog(false);
+    };
+
+    const handleClickDelete = () => {
+        setShowDeleteUserDialog(true);
+    };
+
+    const handleClickDeleteUser = () => {
+        CallAPI({
+            endpoint: "users/" + userInfo?.id,
+            method: "DELETE",
+        }).then(() => {
+            router.push("/users");
+        }).catch(err => {
+            console.error(err);
+        })
+    };
+
     return (
         <>
             <AppBarCustom
                 title={userInfo?.name || "?"}
+                handleClickEdit={() => 1}
+                handleClickDelete={handleClickDelete}
                 backLink={"/users"}
             />
 
@@ -154,7 +186,7 @@ export default function UserDetail({ userInfoFromServer, logInfoFromServer }) {
                     <Paper sx={{ marginBottom: 2, overflow: "hidden" }}>
                         <Image
                             src={userInfo?.image || "/user.png"}
-                            alt={userInfo?.name}
+                            alt={userInfo?.name || ""}
                             width={200}
                             height={200}
                             layout="responsive"
@@ -575,6 +607,21 @@ export default function UserDetail({ userInfoFromServer, logInfoFromServer }) {
                     </Grid>}
                 </Box>
             </Box>
+
+            {/* Dialog */}
+            <Dialog
+                open={showDeleteUserDialog}
+                onClose={handleCloseDeleteUserDialog}
+            >
+                <DialogTitle>ยืนยันการลบ</DialogTitle>
+                <DialogContent>
+                    <DialogContentText>ผู้ใช้ <b>{userInfo?.name}</b> จะถูกลบอย่างถาวร และไม่สามารถกู้คืนข้อมูลได้</DialogContentText>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={handleClickDeleteUser}>ลบผู้ใช้นี้</Button>
+                    <Button onClick={handleCloseDeleteUserDialog} autoFocus>ยกเลิก</Button>
+                </DialogActions>
+            </Dialog>
         </>
     );
 }
