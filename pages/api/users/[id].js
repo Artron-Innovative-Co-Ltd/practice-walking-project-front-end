@@ -59,7 +59,7 @@ handler.put(async (req, res) => {
             }
             
             return res.status(200).json(
-                arr.reduce((obj, item) => Object.assign(obj, { [item.field]: item.value }), {})
+                fieldUpdate.reduce((obj, item) => Object.assign(obj, { [item.field]: item.value }), {})
             );
         }
     );

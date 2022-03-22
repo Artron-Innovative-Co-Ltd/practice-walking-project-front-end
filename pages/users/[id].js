@@ -54,10 +54,51 @@ function BoxInfo({ title, value, unit }) {
     )
 }
 
+const TextFieldCustom = props => <TextField
+    variant="outlined"
+    InputLabelProps={{
+        shrink: true,
+    }}
+    sx={{ width: "100%" }}
+    {...props}
+/>;
+
 export default function UserDetail({ userInfoFromServer, logInfoFromServer }) {
     const router = useRouter();
 
     const [ userInfo, setUserInfo ] = React.useState(userInfoFromServer);
+
+    const [ openEditUserDialog, setOpenEditUserDialog ] = React.useState(false);
+    const openEditUserDialogHandle = () => setOpenEditUserDialog(true);
+    const closeEditUserDialogHandle = () => setOpenEditUserDialog(false);
+
+    const [ editUserInfo, setEditUserInfo ] = React.useState(Object.assign(userInfoFromServer, {
+        date_of_birth: new Date(userInfoFromServer?.date_of_birth).toISOString().split('T')[0]
+    }));
+
+    const userInfoChangeHandle = key => e => {
+        let newUserInfo = { ...editUserInfo };
+        newUserInfo[key] = e.target.value;
+        setEditUserInfo(newUserInfo)
+    }
+
+    const editUserHandle = e => {
+        CallAPI({
+            endpoint: "users/" + userInfo?.id,
+            method: "PUT",
+            data: {
+                name: editUserInfo.name,
+                date_of_birth: new Date(editUserInfo.date_of_birth).toISOString(),
+                height: +editUserInfo.height
+            },
+            auth: false
+        }).then(() => {
+            setUserInfo(Object.assign(userInfo, editUserInfo));
+            setOpenEditUserDialog(false);
+        }).catch(err => {
+            console.log(err);
+        });
+    }
 
     const [tap, setTap] = React.useState(0);
 
@@ -176,7 +217,7 @@ export default function UserDetail({ userInfoFromServer, logInfoFromServer }) {
         <>
             <AppBarCustom
                 title={userInfo?.name || "?"}
-                handleClickEdit={() => 1}
+                handleClickEdit={openEditUserDialogHandle}
                 handleClickDelete={handleClickDelete}
                 backLink={"/users"}
             />
@@ -609,6 +650,51 @@ export default function UserDetail({ userInfoFromServer, logInfoFromServer }) {
             </Box>
 
             {/* Dialog */}
+            <Dialog
+                fullWidth={true}
+                maxWidth={"sm"}
+                open={openEditUserDialog}
+                onClose={closeEditUserDialogHandle}
+            >
+                <DialogTitle>แก้ไขข้อมูลผู้ใช้</DialogTitle>
+                <DialogContent>
+                    <Box pt={3}>
+                        <TextFieldCustom
+                            label="ชื่อ-นามสกุล"
+                            type="text"
+                            value={editUserInfo?.name}
+                            onChange={userInfoChangeHandle("name")}
+                        />
+                    </Box>
+                    <Box pt={3}>
+                        <Grid container spacing={3}>
+                            <Grid item xs={6}>
+                                <TextFieldCustom
+                                    label="วัน เดือน ปีเกิด"
+                                    type="date"
+                                    value={editUserInfo?.date_of_birth}
+                                    onChange={userInfoChangeHandle("date_of_birth")}
+                                />
+                            </Grid>
+                            <Grid item xs={6}>
+                                <TextFieldCustom
+                                    label="ส่วนสูง"
+                                    type="number"
+                                    min={50}
+                                    max={300}
+                                    value={editUserInfo?.height}
+                                    onChange={userInfoChangeHandle("height")}
+                                />
+                            </Grid>
+                        </Grid>
+                    </Box>
+                </DialogContent>
+                <DialogActions>
+                    <Button variant="contained" onClick={editUserHandle} disableElevation>บันทึก</Button>
+                    <Button variant="text" onClick={closeEditUserDialogHandle}>ยกเลิก</Button>
+                </DialogActions>
+            </Dialog>
+
             <Dialog
                 open={showDeleteUserDialog}
                 onClose={handleCloseDeleteUserDialog}
