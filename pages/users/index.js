@@ -20,6 +20,7 @@ import Button from '@mui/material/Button';
 
 import AppBarCustom from '../../src/AppBarCustom';
 import CallAPI from '../../src/WebCallAPI';
+import CalculateAge from '../../src/CalculateAge';
 
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 
@@ -32,8 +33,14 @@ const TextFieldCustom = props => <TextField
     {...props}
 />;
 
-export default function Users() {
+export default function Users({ usersFromServer }) {
     const router = useRouter();
+
+    const [ openAddUserDialog, setOpenAddUserDialog ] = React.useState(false);
+    const openAddUserDialogHandle = () => setOpenAddUserDialog(true);
+    const closeAddUserDialogHandle = () => setOpenAddUserDialog(false);
+
+    const [ users, setUsers ] = React.useState(usersFromServer);
 
     const [ userInfo, setUserInfo ] = React.useState({
         name: "",
@@ -53,7 +60,7 @@ export default function Users() {
             method: "POST",
             data: {
                 name: userInfo.name,
-                date_of_birth: userInfo.date_of_birth,
+                date_of_birth: new Date(userInfo.date_of_birth).toISOString(),
                 height: +userInfo.height
             },
             auth: false
@@ -72,29 +79,30 @@ export default function Users() {
             />
 
             <Grid container spacing={3} p={3}>
-                <Grid item xs={12} sm={6} lg={4}>
-                    <Link href={"/users/1"} passHref>
-                        <Card sx={{ display: 'flex', textDecoration: "none" }} component={"a"}>
-                            <CardActionArea sx={{ display: 'flex', flexDirection: 'row', alignItems: "flex-start" }}>
-                                <CardMedia
-                                    component="img"
-                                    sx={{ width: 200, height: 200 }}
-                                    image="/elolnnnn.jpg"
-                                    alt="green iguana"
-                                />
-                                <CardContent sx={{ flexGrow: 1 }}>
-                                    <Typography gutterBottom variant="h5" component="div">สนธยา นงนุช</Typography>
-                                    <Typography variant="body2" color="text.secondary">อายุ <b>54</b> ปี</Typography>
-                                    <Typography variant="body2" color="text.secondary">น้ำหนัก <b>54</b> กิโลกรัม</Typography>
-                                    <Typography variant="body2" color="text.secondary">ส่วนสูง <b>54</b> เซ็นติเมตร</Typography>
-                                </CardContent>
-                            </CardActionArea>
-                        </Card>
-                    </Link>
-                </Grid>
+                {users.map(item => 
+                    <Grid item xs={12} sm={6} lg={4} key={item?.id || 0}>
+                        <Link href={"/users/" + item?.id || 0} passHref>
+                            <Card sx={{ display: 'flex', textDecoration: "none" }} component={"a"}>
+                                <CardActionArea sx={{ display: 'flex', flexDirection: 'row', alignItems: "flex-start" }}>
+                                    <CardMedia
+                                        component="img"
+                                        sx={{ width: 200, height: 200 }}
+                                        image={item?.image || "/user.png"}
+                                        alt={item?.name || "?"}
+                                    />
+                                    <CardContent sx={{ flexGrow: 1 }}>
+                                        <Typography gutterBottom variant="h5" component="div">{item?.name || "?"}</Typography>
+                                        <Typography variant="body2" color="text.secondary">อายุ <b>{CalculateAge(item?.date_of_birth || 0)}</b> ปี</Typography>
+                                        <Typography variant="body2" color="text.secondary">ส่วนสูง <b>{item?.height || "?"}</b> เซ็นติเมตร</Typography>
+                                    </CardContent>
+                                </CardActionArea>
+                            </Card>
+                        </Link>
+                    </Grid>
+                )}
                 <Grid item xs={12} sm={6} lg={4}>
                     <Card sx={{ display: 'flex' }}>
-                        <CardActionArea sx={{ display: 'flex', flexDirection: 'row', alignItems: "flex-start" }}>
+                        <CardActionArea sx={{ display: 'flex', flexDirection: 'row', alignItems: "flex-start" }} onClick={openAddUserDialogHandle}>
                             <Box sx={{ height: 200, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
                                 <AddCircleOutlineIcon sx={{ fontSize: 60 }} />
                                 <Typography gutterBottom variant="h5" component="div">เพิ่มใหม่</Typography>
@@ -108,8 +116,8 @@ export default function Users() {
             <Dialog
                 fullWidth={true}
                 maxWidth={"sm"}
-                open={true}
-                onClose={() => 1}
+                open={openAddUserDialog}
+                onClose={closeAddUserDialogHandle}
             >
                 <DialogTitle>เพิ่มผู้ใช้ใหม่</DialogTitle>
                 <DialogContent>
@@ -146,9 +154,30 @@ export default function Users() {
                 </DialogContent>
                 <DialogActions>
                     <Button variant="contained" onClick={addUserHandle} disableElevation>บันทึก</Button>
-                    <Button variant="text" onClick={() => 1}>ยกเลิก</Button>
+                    <Button variant="text" onClick={closeAddUserDialogHandle}>ยกเลิก</Button>
                 </DialogActions>
             </Dialog>
         </>
     );
 }
+
+import { connect as DatabaseConnect } from '../../src/DatabaseUtility';
+
+export async function getServerSideProps({ req, res, query }) {
+    const userId = query.id;
+
+    const db = await DatabaseConnect();
+
+    const users = await db.allPromise(
+        "SELECT * FROM users"
+    );
+
+    db.close();
+
+    return {
+        props: {
+            usersFromServer: users || { },
+        }
+    };
+}
+

@@ -29,6 +29,7 @@ import DashboardIcon from '@mui/icons-material/Dashboard';
 const Chart = dynamic(() => import('react-apexcharts'), { ssr: false });
 
 import AppBarCustom from '../../src/AppBarCustom';
+import CalculateAge from '../../src/CalculateAge';
 
 
 function BoxInfo({ title, value, unit }) {
@@ -45,11 +46,12 @@ function BoxInfo({ title, value, unit }) {
     )
 }
 
-export default function UserDetail() {
+export default function UserDetail({ userInfoFromServer, logInfoFromServer }) {
+    const [ userInfo, setUserInfo ] = React.useState(userInfoFromServer);
+
     const [tap, setTap] = React.useState(0);
 
     const handleChangeTap = (event, newValue) => {
-        console.log(newValue);
         setTap(newValue);
     };
 
@@ -143,7 +145,7 @@ export default function UserDetail() {
     return (
         <>
             <AppBarCustom
-                title={"สนธยา นงนุช"}
+                title={userInfo?.name || "?"}
                 backLink={"/users"}
             />
 
@@ -151,8 +153,8 @@ export default function UserDetail() {
                 <Grid item sx={{ textAlign: "center" }} pr={3}>
                     <Paper sx={{ marginBottom: 2, overflow: "hidden" }}>
                         <Image
-                            src="/elolnnnn.jpg"
-                            alt="Picture of the author"
+                            src={userInfo?.image || "/user.png"}
+                            alt={userInfo?.name}
                             width={200}
                             height={200}
                             layout="responsive"
@@ -165,21 +167,21 @@ export default function UserDetail() {
                         <Grid item xs={6} sm={4} lg={3}>
                             <BoxInfo
                                 title={"อายุ"}
-                                value={12}
+                                value={CalculateAge(userInfo?.date_of_birth || 0)}
                                 unit={"ปี"}
                             />
                         </Grid>
-                        <Grid item xs={6} sm={4} lg={3}>
+                        {logInfoFromServer.length > 0 && <Grid item xs={6} sm={4} lg={3}>
                             <BoxInfo
                                 title={"น้ำหนัก"}
-                                value={54}
+                                value={logInfoFromServer?.[logInfoFromServer.length -1]?.weight || "?"}
                                 unit={"kg"}
                             />
-                        </Grid>
+                        </Grid>}
                         <Grid item xs={6} sm={4} lg={3}>
                             <BoxInfo
                                 title={"ส่วนสูง"}
-                                value={176}
+                                value={userInfo?.height || "?"}
                                 unit={"cm"}
                             />
                         </Grid>
@@ -576,3 +578,35 @@ export default function UserDetail() {
         </>
     );
 }
+
+import { connect as DatabaseConnect } from '../../src/DatabaseUtility';
+
+export async function getServerSideProps({ req, res, query }) {
+    const userId = query.id;
+
+    const db = await DatabaseConnect();
+
+    const userInfo = await db.getPromise(
+        "SELECT * FROM users WHERE id = ? LIMIT 1;", 
+        [ 
+            userId
+        ]
+    );
+
+    const logInfo = await db.getPromise(
+        "SELECT * FROM log WHERE uid = ?", 
+        [ 
+            userId
+        ]
+    );
+
+    db.close();
+
+    return {
+        props: {
+            userInfoFromServer: userInfo || { },
+            logInfoFromServer: logInfo || [],
+        }
+    };
+}
+

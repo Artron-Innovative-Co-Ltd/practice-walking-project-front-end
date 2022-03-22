@@ -19,19 +19,20 @@ handler.post(async (req, res) => {
         {
             name: null,
             date_of_birth: null,
-            hight: null,
+            height: null,
         }, 
         req.body
     );
+    // console.log(userInfo);
 
     const db = await DatabaseConnect();
 
     db.run(
-        "INSERT INTO users (name, date_of_birth, hight, image) VALUES (?, ?, ?, NULL)",
+        "INSERT INTO users (name, date_of_birth, height, image) VALUES (?, ?, ?, NULL)",
         [
             userInfo.name,
             userInfo.date_of_birth,
-            userInfo.hight,
+            userInfo.height,
         ],
         function(err) {
             db.get("SELECT last_insert_rowid() as id", function(err, row) {
