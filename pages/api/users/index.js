@@ -1,11 +1,16 @@
 import nextConnect from 'next-connect';
+import { connect as DatabaseConnect } from '../../../src/DatabaseUtility';
 
-
+const handler = nextConnect();
 
 handler.get(async (req, res) => {
-    
+    const db = await DatabaseConnect();
 
-    return res.status(200).json(users);
+    db.all("SELECT * FROM users", function(err, rows) {
+        db.close();
+
+        return res.status(200).json(rows);
+    });
 });
 
 /* Add user */
@@ -19,22 +24,23 @@ handler.post(async (req, res) => {
         req.body
     );
 
-    let addUser = await req.dbClient.query(
-        "INSERT INTO general.users (name, username, password, email, tel, permission, location_owner) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id;",
+    const db = await DatabaseConnect();
+
+    db.run(
+        "INSERT INTO users (name, date_of_birth, hight, image) VALUES (?, ?, ?, NULL)",
         [
             userInfo.name,
-            userInfo.username,
-            await PasswordHash.hash(userInfo.password),
-            userInfo.email,
-            userInfo.tel,
-            userInfo.permission,
-            userInfo.location_owner
-        ]
+            userInfo.date_of_birth,
+            userInfo.hight,
+        ],
+        function(err) {
+            db.get("SELECT last_insert_rowid() as id", function(err, row) {
+                db.close();
+        
+                return res.status(200).json({ id: row?.id });
+            });
+        }
     );
-
-    return res.status(200).json({
-        id: addUser.rows[0].id
-    });
 });
 
 export default handler;

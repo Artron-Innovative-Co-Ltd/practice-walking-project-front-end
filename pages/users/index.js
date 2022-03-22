@@ -1,5 +1,6 @@
 import React from 'react';
 import Link from 'next/link'
+import { useRouter } from 'next/router';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
@@ -18,6 +19,7 @@ import TextField from '@mui/material/TextField';
 import Button from '@mui/material/Button';
 
 import AppBarCustom from '../../src/AppBarCustom';
+import CallAPI from '../../src/WebCallAPI';
 
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 
@@ -31,6 +33,37 @@ const TextFieldCustom = props => <TextField
 />;
 
 export default function Users() {
+    const router = useRouter();
+
+    const [ userInfo, setUserInfo ] = React.useState({
+        name: "",
+        date_of_birth: "",
+        height: ""
+    });
+
+    const userInfoChangeHandle = key => e => {
+        let newUserInfo = { ...userInfo };
+        newUserInfo[key] = e.target.value;
+        setUserInfo(newUserInfo)
+    }
+
+    const addUserHandle = e => {
+        CallAPI({
+            endpoint: "users",
+            method: "POST",
+            data: {
+                name: userInfo.name,
+                date_of_birth: userInfo.date_of_birth,
+                height: +userInfo.height
+            },
+            auth: false
+        }).then(({ id }) => {
+            router.push("/users/" + id);
+        }).catch(err => {
+            console.log(err);
+        });
+    }
+
     return (
         <>
             <AppBarCustom
@@ -84,6 +117,8 @@ export default function Users() {
                         <TextFieldCustom
                             label="ชื่อ-นามสกุล"
                             type="text"
+                            value={userInfo?.name}
+                            onChange={userInfoChangeHandle("name")}
                         />
                     </Box>
                     <Box pt={3}>
@@ -91,20 +126,26 @@ export default function Users() {
                             <Grid item xs={6}>
                                 <TextFieldCustom
                                     label="วัน เดือน ปีเกิด"
-                                    type="datetime-local"
+                                    type="date"
+                                    value={userInfo?.date_of_birth}
+                                    onChange={userInfoChangeHandle("date_of_birth")}
                                 />
                             </Grid>
                             <Grid item xs={6}>
                                 <TextFieldCustom
                                     label="ส่วนสูง"
                                     type="number"
+                                    min={50}
+                                    max={300}
+                                    value={userInfo?.height}
+                                    onChange={userInfoChangeHandle("height")}
                                 />
                             </Grid>
                         </Grid>
                     </Box>
                 </DialogContent>
                 <DialogActions>
-                    <Button variant="contained" onClick={() => 1} disableElevation>บันทึก</Button>
+                    <Button variant="contained" onClick={addUserHandle} disableElevation>บันทึก</Button>
                     <Button variant="text" onClick={() => 1}>ยกเลิก</Button>
                 </DialogActions>
             </Dialog>
