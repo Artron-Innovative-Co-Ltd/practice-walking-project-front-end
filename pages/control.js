@@ -8,6 +8,7 @@ import Box from '@mui/material/Box';
 import OriginalSlider from '@mui/material/Slider';
 import { styled } from '@mui/material/styles';
 import Button from '@mui/material/Button';
+import LoadingButton from '@mui/lab/LoadingButton';
 
 // Icon
 import HartrateIcon from '../public/images/cardiogram.svg';
@@ -56,7 +57,7 @@ const Slider = styled(OriginalSlider)({
     },
 });
 
-const PauseButton = styled(Button)({
+const PauseButton = styled(LoadingButton)({
     backgroundColor: 'rgba(255, 255, 255, 0)',
     borderColor: '#FFF',
     color: "#FFF",
@@ -75,31 +76,45 @@ const PauseButton = styled(Button)({
     '&:focus': {
         boxShadow: 'none',
     },
+    '.MuiLoadingButton-loadingIndicator': {
+        color: "#FFF",
+    },
+    '&.Mui-disabled': {
+        borderColor: '#FFF',
+        backgroundColor: "rgba(255, 255, 255, 0.4)"
+    }
 });
 
-const StopButton = styled(Button)({
-    backgroundColor: '#dc3545',
+const StopButton = styled(LoadingButton)({
+    backgroundColor: '#E74C3C',
     border: "none",
     color: "#FFF",
     width: "100%",
     fontSize: 22,
     '&:hover': {
-        backgroundColor: '#dc3545',
+        backgroundColor: '#E74C3C',
         border: "none",
         boxShadow: 'none',
     },
     '&:active': {
         boxShadow: 'none',
-        backgroundColor: '#dc3545',
+        backgroundColor: '#E74C3C',
         borderColor: '#FFF',
     },
     '&:focus': {
         boxShadow: 'none',
     },
+    '.MuiLoadingButton-loadingIndicator': {
+        color: "#FFF"
+    },
+    '&.Mui-disabled': {
+        backgroundColor: '#F1948A',
+        color: "rgba(255, 255, 255, 0.6)"
+    }
 });
 
 
-const StartButton = styled(Button)({
+const StartButton = styled(LoadingButton)({
     backgroundColor: '#52af77',
     border: "none",
     color: "#FFF",
@@ -118,6 +133,12 @@ const StartButton = styled(Button)({
     '&:focus': {
         boxShadow: 'none',
     },
+    '.MuiLoadingButton-loadingIndicator': {
+        color: "#FFF"
+    },
+    '&.Mui-disabled': {
+        backgroundColor: '#ABEBC6',
+    }
 });
 
 const Chart = dynamic(() => import('react-apexcharts'), { ssr: false });
@@ -126,16 +147,33 @@ export default function ControlPage() {
     const router = useRouter();
     const userId = router.query?.uid;
 
-    const [runState, setRunState] = React.useState(0);
+    const State = {
+        BEFORE_START: 0,
+        STARTING: 1,
+        RUNNING: 2,
+        PAUSEING: 3,
+        PAUSE: 4,
+        STOPING: 5,
+        STOP: 6
+    };
+
+    const [runState, setRunState] = React.useState(State.BEFORE_START);
     const [currentSpeed, setCurrentSpeed] = React.useState(0);
     const speedChangeHandle = (e, newValue) => setCurrentSpeed(newValue);
 
-    const startHandle = () => setRunState(1);
+    const startHandle = () => {
+        setRunState(State.STARTING);
 
-    const pauseHandle = () => setRunState(2);
+        setTimeout(() => {
+            setRunState(State.RUNNING);
+        }, 3000);
+    }
+
+    const pauseHandle = () => setRunState(State.PAUSEING);
 
     const stopHandle = () => {
-        router.push("/users/" + userId);
+        setRunState(State.STOPING);
+        // router.push("/users/" + userId);
     }
 
     return (
@@ -203,15 +241,15 @@ export default function ControlPage() {
                                 valueLabelDisplay="auto"
                             />
                         </div>
-                        {runState == 0 &&
+                        {(runState == State.BEFORE_START || runState == State.STARTING) &&
                             <>
-                                <div><StartButton variant="contained" onClick={startHandle}>เริ่มการทำงาน</StartButton></div>
+                                <div><StartButton loading={runState == State.STARTING} variant="contained" onClick={startHandle}>เริ่มการทำงาน</StartButton></div>
                             </>
                         }
-                        {runState == 1 &&
+                        {(runState == State.RUNNING || runState == State.PAUSEING || runState == State.PAUSE || runState == State.STOPING || runState == State.STOP) &&
                             <>
-                                <div><PauseButton variant="outlined" onClick={pauseHandle}>พักชั่วคราว</PauseButton></div>
-                                <div><StopButton variant="contained" onClick={stopHandle}>หยุดการทำงาน</StopButton></div>
+                                <div><PauseButton loading={runState == State.PAUSEING} disabled={runState == State.STOPING} variant="outlined" onClick={pauseHandle}>พักชั่วคราว</PauseButton></div>
+                                <div><StopButton loading={runState == State.STOPING} disabled={runState == State.PAUSEING} variant="contained" onClick={stopHandle}>หยุดการทำงาน</StopButton></div>
                             </>
                         }
                     </div>
