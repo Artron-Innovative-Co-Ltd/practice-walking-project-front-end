@@ -1,6 +1,8 @@
 import React from 'react';
 import Head from 'next/head';
 import dynamic from 'next/dynamic';
+import Link from 'next/link'
+import { useRouter } from 'next/router';
 
 import Box from '@mui/material/Box';
 import OriginalSlider from '@mui/material/Slider';
@@ -96,10 +98,45 @@ const StopButton = styled(Button)({
     },
 });
 
+
+const StartButton = styled(Button)({
+    backgroundColor: '#52af77',
+    border: "none",
+    color: "#FFF",
+    width: "100%",
+    fontSize: 22,
+    '&:hover': {
+        backgroundColor: '#52af77',
+        border: "none",
+        boxShadow: 'none',
+    },
+    '&:active': {
+        boxShadow: 'none',
+        backgroundColor: '#52af77',
+        borderColor: '#FFF',
+    },
+    '&:focus': {
+        boxShadow: 'none',
+    },
+});
+
 const Chart = dynamic(() => import('react-apexcharts'), { ssr: false });
 
-export default function Index() {
+export default function ControlPage() {
+    const router = useRouter();
+    const userId = router.query?.uid;
+
+    const [runState, setRunState] = React.useState(0);
     const [currentSpeed, setCurrentSpeed] = React.useState(0);
+    const speedChangeHandle = (e, newValue) => setCurrentSpeed(newValue);
+
+    const startHandle = () => setRunState(1);
+
+    const pauseHandle = () => setRunState(2);
+
+    const stopHandle = () => {
+        router.push("/users/" + userId);
+    }
 
     return (
         <>
@@ -161,12 +198,22 @@ export default function Index() {
                         <div>ความเร็ว : <span>{currentSpeed} km/h</span></div>
                         <div className={style.boxSlider}>
                             <Slider
-                                defaultValue={70}
+                                value={currentSpeed}
+                                onChange={speedChangeHandle}
                                 valueLabelDisplay="auto"
                             />
                         </div>
-                        <div><PauseButton variant="outlined">พักชั่วคราว</PauseButton></div>
-                        <div><StopButton variant="contained">หยุดการทำงาน</StopButton></div>
+                        {runState == 0 &&
+                            <>
+                                <div><StartButton variant="contained" onClick={startHandle}>เริ่มการทำงาน</StartButton></div>
+                            </>
+                        }
+                        {runState == 1 &&
+                            <>
+                                <div><PauseButton variant="outlined" onClick={pauseHandle}>พักชั่วคราว</PauseButton></div>
+                                <div><StopButton variant="contained" onClick={stopHandle}>หยุดการทำงาน</StopButton></div>
+                            </>
+                        }
                     </div>
                     <div className={style.controlChart}>
                         <Chart

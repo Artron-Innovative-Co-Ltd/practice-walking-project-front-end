@@ -213,6 +213,9 @@ export default function UserDetail({ userInfoFromServer, logInfoFromServer }) {
         })
     };
 
+    const [ weight, setWeight ] = React.useState("");
+    const weightChangeHandle = e => setWeight(+e.target.value);
+
     return (
         <>
             <AppBarCustom
@@ -282,6 +285,8 @@ export default function UserDetail({ userInfoFromServer, logInfoFromServer }) {
                                             shrink: true,
                                         }}
                                         variant="outlined"
+                                        value={weight}
+                                        onChange={weightChangeHandle}
                                     />
                                 </Grid>
                                 <Grid item xs={12}>
@@ -302,7 +307,11 @@ export default function UserDetail({ userInfoFromServer, logInfoFromServer }) {
                             </Grid>
                         </Grid>
                         <Grid item>
-                            <Link href={"/control"} passHref>
+                            <Link href={{ pathname: '/control', query: { 
+                                uid: userInfo?.id || 0,
+                                weight,
+                                time: timeRun
+                            }}} passHref>
                                 <Button 
                                     variant="contained" 
                                     endIcon={<SendIcon />}
