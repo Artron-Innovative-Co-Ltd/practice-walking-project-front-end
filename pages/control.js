@@ -9,12 +9,19 @@ import OriginalSlider from '@mui/material/Slider';
 import { styled } from '@mui/material/styles';
 import Button from '@mui/material/Button';
 import LoadingButton from '@mui/lab/LoadingButton';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogContentText from '@mui/material/DialogContentText';
+import DialogTitle from '@mui/material/DialogTitle';
 
 // Icon
 import HartrateIcon from '../public/images/cardiogram.svg';
 import RoadIcon from '../public/images/road.svg';
 import CalorieIcon from '../public/images/calories-calculator.svg';
 import FootIcon from '../public/images/footsteps-silhouette-variant.svg';
+
+import SocketIO from 'socket.io-client';
 
 import style from '../styles/control.module.scss';
 
@@ -157,9 +164,43 @@ export default function ControlPage() {
         STOP: 6
     };
 
+    const [socket, setSocket] = React.useState(null);
+
     const [runState, setRunState] = React.useState(State.BEFORE_START);
     const [currentSpeed, setCurrentSpeed] = React.useState(0);
-    const speedChangeHandle = (e, newValue) => setCurrentSpeed(newValue);
+    const [preSetSpeed, setPreSetSpeed] = React.useState(0);
+
+    const [openConfirmChangeSpeedDialog, setOpenConfirmChangeSpeedDialog] = React.useState(false);
+
+    const speedChangeHandle = (e, newValue) => {
+        setPreSetSpeed(newValue);
+    }
+
+    const speedChangeCommittedHandle = (e) => {
+        if (runState === State.BEFORE_START) {
+            if (socket) {
+                socket.emit("set_speed", preSetSpeed);
+            } else {
+                console.warn("SocketIO disconnect");
+            }
+        } else {
+            setOpenConfirmChangeSpeedDialog(true);
+        }
+    }
+
+    const confirmChangeSpeedHandle = () => {
+        setOpenConfirmChangeSpeedDialog(false);
+        if (socket) {
+            socket.emit("set_speed", preSetSpeed);
+        } else {
+            console.warn("SocketIO disconnect");
+        }
+    }
+
+    const cancelChangeSpeedHandle = () => {
+        setOpenConfirmChangeSpeedDialog(false);
+        setPreSetSpeed(currentSpeed);
+    }
 
     const startHandle = () => {
         setRunState(State.STARTING);
@@ -176,6 +217,42 @@ export default function ControlPage() {
         // router.push("/users/" + userId);
     }
 
+    const [sensorValue, setSensorValue] = React.useState({
+        heartRate: 0,
+        distance: 0
+    });
+    const [distance, setDistance] = React.useState(0);
+
+    React.useEffect(() => {
+        if (socket) {
+            return () => {
+                socket.disconnect();
+            }
+        }
+
+        const socketIo = SocketIO("http://localhost:3002", {
+            transports: ['websocket']
+        });
+        setSocket(socketIo);
+
+        socketIo.on("value_update", data => {
+            console.log("New Data", data);
+
+            setSensorValue(data);
+        });
+
+        socketIo.on("new_speed", newSpeed => {
+            console.log("New Speed", newSpeed);
+
+            setCurrentSpeed(newSpeed);
+            setPreSetSpeed(newSpeed);
+        });
+
+        return () => {
+            socketIo.disconnect();
+        }
+    }, []);
+
     return (
         <>
             <div className={style.contener}>
@@ -187,14 +264,14 @@ export default function ControlPage() {
                                     <div>
                                         <HartrateIcon />
                                     </div>
-                                    <div>123</div>
+                                    <div>{sensorValue?.heartRate || "?"}</div>
                                     <div>bpm</div>
                                 </li>
                                 <li>
                                     <div>
                                         <RoadIcon />
                                     </div>
-                                    <div>1</div>
+                                    <div>{sensorValue?.distance || "?"}</div>
                                     <div>km</div>
                                 </li>
                             </ul>
@@ -236,8 +313,9 @@ export default function ControlPage() {
                         <div>ความเร็ว : <span>{currentSpeed} km/h</span></div>
                         <div className={style.boxSlider}>
                             <Slider
-                                value={currentSpeed}
+                                value={preSetSpeed}
                                 onChange={speedChangeHandle}
+                                onChangeCommitted={speedChangeCommittedHandle}
                                 valueLabelDisplay="auto"
                             />
                         </div>
@@ -312,6 +390,23 @@ export default function ControlPage() {
                     </div>
                 </div>
             </div>
+
+
+            <Dialog
+                open={openConfirmChangeSpeedDialog}
+                onClose={cancelChangeSpeedHandle}
+            >
+                <DialogTitle>ยืนยันการปรับความเร็ว?</DialogTitle>
+                <DialogContent>
+                    <DialogContentText>ความเร็วจะเปลี่ยนเป็น <b>{preSetSpeed} km/h</b> ยืนยันการเปลี่ยนความเร็วหรือไม่?</DialogContentText>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={cancelChangeSpeedHandle}>ยกเลิก</Button>
+                    <Button onClick={confirmChangeSpeedHandle} autoFocus>
+                        ยืนยัน
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </>
     );
 }
