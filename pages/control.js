@@ -23,6 +23,8 @@ import FootIcon from '../public/images/footsteps-silhouette-variant.svg';
 
 import SocketIO from 'socket.io-client';
 
+import CallAPI from '../src/WebCallAPI';
+
 import style from '../styles/control.module.scss';
 
 const Slider = styled(OriginalSlider)({
@@ -148,11 +150,42 @@ const StartButton = styled(LoadingButton)({
     }
 });
 
+const BackButton = styled(LoadingButton)({
+    backgroundColor: '#F1C40F',
+    border: "none",
+    color: "#FFF",
+    width: "100%",
+    fontSize: 22,
+    '&:hover': {
+        backgroundColor: '#F1C40F',
+        border: "none",
+        boxShadow: 'none',
+    },
+    '&:active': {
+        boxShadow: 'none',
+        backgroundColor: '#F1C40F',
+        borderColor: '#FFF',
+    },
+    '&:focus': {
+        boxShadow: 'none',
+    },
+    '.MuiLoadingButton-loadingIndicator': {
+        color: "#FFF"
+    },
+    '&.Mui-disabled': {
+        backgroundColor: '#ABEBC6',
+    }
+});
+
+const zeroPad = (num, places) => String(num).padStart(places, '0')
+
 const Chart = dynamic(() => import('react-apexcharts'), { ssr: false });
 
 export default function ControlPage() {
     const router = useRouter();
     const userId = router.query?.uid;
+    const { weight } = router.query; 
+    const planTime = router.query?.time * 60;
 
     const State = {
         BEFORE_START: 0,
@@ -164,11 +197,16 @@ export default function ControlPage() {
         STOP: 6
     };
 
-    const [socket, setSocket] = React.useState(null);
+    const [ socket, setSocket ] = React.useState(null);
 
-    const [runState, setRunState] = React.useState(State.BEFORE_START);
-    const [currentSpeed, setCurrentSpeed] = React.useState(0);
-    const [preSetSpeed, setPreSetSpeed] = React.useState(0);
+    const [ logId, setLogId ] = React.useState(0);
+    const [ timeRun, setTimeRun ] = React.useState(0);
+    const [ heartRateLog, setHeartRateLog ] = React.useState([ ]);
+    const [ runState, setRunState ] = React.useState(State.BEFORE_START);
+    const [ currentSpeed, setCurrentSpeed ] = React.useState(0);
+    const [ preSetSpeed, setPreSetSpeed ] = React.useState(0);
+    const [ speedChangeing, setSpeedChangeing ] = React.useState(false);
+    const [ timer, setTimer ] = React.useState(null);
 
     const [openConfirmChangeSpeedDialog, setOpenConfirmChangeSpeedDialog] = React.useState(false);
 
@@ -177,24 +215,33 @@ export default function ControlPage() {
     }
 
     const speedChangeCommittedHandle = (e) => {
-        if (runState === State.BEFORE_START) {
+        if (runState === State.BEFORE_START || runState === State.PAUSE) {
             if (socket) {
-                socket.emit("set_speed", preSetSpeed);
+                // socket.emit("set_speed", preSetSpeed);
             } else {
                 console.warn("SocketIO disconnect");
             }
+            setSpeedChangeing(false);
         } else {
             setOpenConfirmChangeSpeedDialog(true);
         }
     }
 
+    const startSpeedChangeHandle = () => {
+        console.log("Start");
+        setSpeedChangeing(true);
+    }
+
     const confirmChangeSpeedHandle = () => {
         setOpenConfirmChangeSpeedDialog(false);
         if (socket) {
-            socket.emit("set_speed", preSetSpeed);
+            socket.emit("control", {
+                speed: preSetSpeed,
+            });
         } else {
             console.warn("SocketIO disconnect");
         }
+        setSpeedChangeing(false);
     }
 
     const cancelChangeSpeedHandle = () => {
@@ -203,17 +250,45 @@ export default function ControlPage() {
     }
 
     const startHandle = () => {
-        setRunState(State.STARTING);
+        if (runState === State.BEFORE_START) {
+            setRunState(State.STARTING);
 
-        setTimeout(() => {
+            CallAPI({
+                endpoint: "log?uid=" + userId,
+                method: "POST",
+                data: {
+                    date_of_start: new Date().toISOString(),
+                    weight: +weight
+                }
+            }).then(async ({ id }) => {
+                socket.emit("control", {
+                    speed: preSetSpeed,
+                });
+                setLogId(id);
+                setRunState(State.RUNNING);
+            }).catch(err => {
+                console.log(err);
+            });
+        } else if (runState === State.PAUSE) {
+            socket.emit("control", {
+                speed: preSetSpeed,
+            });
             setRunState(State.RUNNING);
-        }, 3000);
+        }
     }
 
-    const pauseHandle = () => setRunState(State.PAUSEING);
+    const pauseHandle = () => {
+        socket.emit("control", {
+            speed: 0,
+        });
+        setRunState(State.PAUSE);
+    }
 
     const stopHandle = () => {
-        setRunState(State.STOPING);
+        socket.emit("control", {
+            speed: 0,
+        });
+        setRunState(State.STOP);
         // router.push("/users/" + userId);
     }
 
@@ -221,37 +296,79 @@ export default function ControlPage() {
         heartRate: 0,
         distance: 0
     });
-    const [distance, setDistance] = React.useState(0);
 
     React.useEffect(() => {
-        if (socket) {
-            return () => {
-                socket.disconnect();
-            }
+        let socketIo;
+        if (!socket) {
+            socketIo = SocketIO("http://localhost:3002", {
+                transports: ['websocket']
+            });
+            setSocket(socketIo);
+        } else {
+            socketIo = socket;
         }
-
-        const socketIo = SocketIO("http://localhost:3002", {
-            transports: ['websocket']
-        });
-        setSocket(socketIo);
-
-        socketIo.on("value_update", data => {
-            console.log("New Data", data);
-
-            setSensorValue(data);
-        });
-
-        socketIo.on("new_speed", newSpeed => {
-            console.log("New Speed", newSpeed);
-
-            setCurrentSpeed(newSpeed);
-            setPreSetSpeed(newSpeed);
-        });
 
         return () => {
             socketIo.disconnect();
         }
-    }, []);
+    }, [ ]);
+
+    React.useEffect(() => {
+        if (!socket) {
+            return;
+        }
+
+        socket.off("value_update");
+        socket.on("value_update", data => {
+            console.log("New Data", data);
+            console.log("runState", runState);
+
+            setSensorValue(data);
+            if (data?.speed > 0 && runState === State.BEFORE_START) {
+                socket.emit("control", {
+                    speed: 0,
+                    reset: true
+                });
+            } else {
+                setCurrentSpeed(data?.speed || 0);
+                /*if ((!speedChangeing) && runState !== State.BEFORE_START) {
+                    setPreSetSpeed(data?.speed || 0);
+                }*/
+            }
+        });
+    }, [ runState, socket, speedChangeing ]); 
+
+    React.useEffect(() => {
+        if (runState !== State.RUNNING) {
+            return;
+        }
+
+        let newHeartRateLog = [ ...heartRateLog ];
+        newHeartRateLog.push({
+            x: new Date(),
+            y: sensorValue?.heartRate
+        });
+        setHeartRateLog(newHeartRateLog);
+    }, [ sensorValue ]); 
+
+
+
+    React.useEffect(() => {
+        if (runState === State.RUNNING && ((planTime - timeRun) > 0)) {
+            const timer_init = setTimeout(() => {
+                const newTimeRun = timeRun + 1;
+                setTimeRun(newTimeRun);
+                if ((planTime - newTimeRun) <= 0) {
+                    stopHandle();
+                }
+            }, 1000);
+            setTimer(timer_init);
+        } else {
+            clearTimeout(timer);
+            setTimer(null);
+        }
+
+    }, [ runState, timeRun ]); 
 
     return (
         <>
@@ -281,10 +398,10 @@ export default function ControlPage() {
                                 <div className={style.processBar}></div>
                                 <div className={style.processContent}>
                                     <div className={style.processText}>
-                                        <span>30</span>
+                                        <span>{Math.round(timeRun / planTime  * 100)}</span>
                                         <span>%</span>
                                     </div>
-                                    <div className={style.processTime}>00:20</div>
+                                    <div className={style.processTime}>{zeroPad(Math.floor((planTime - timeRun) / 60), 2)}:{zeroPad((planTime - timeRun) % 60, 2)}</div>
                                 </div>
                             </div>
                         </div>
@@ -294,14 +411,14 @@ export default function ControlPage() {
                                     <div>
                                         <CalorieIcon />
                                     </div>
-                                    <div>123</div>
+                                    <div>{((sensorValue?.distance || 0) * weight * 1.036).toFixed(2)}</div>
                                     <div>kcal</div>
                                 </li>
                                 <li>
                                     <div>
                                         <FootIcon />
                                     </div>
-                                    <div>1</div>
+                                    <div>{(((sensorValue?.distance || 0) / 0.79) * 1000).toFixed(2)}</div>
                                     <div>step</div>
                                 </li>
                             </ul>
@@ -312,22 +429,55 @@ export default function ControlPage() {
                     <div className={style.controlLeft}>
                         <div>ความเร็ว : <span>{currentSpeed} km/h</span></div>
                         <div className={style.boxSlider}>
-                            <Slider
+                            {runState !== State.STOP && <Slider
                                 value={preSetSpeed}
                                 onChange={speedChangeHandle}
                                 onChangeCommitted={speedChangeCommittedHandle}
                                 valueLabelDisplay="auto"
-                            />
+                                min={0}
+                                max={40}
+                                onDragEnter={startSpeedChangeHandle}
+                            />}
                         </div>
-                        {(runState == State.BEFORE_START || runState == State.STARTING) &&
+                        {(runState == State.BEFORE_START || runState == State.STARTING || runState == State.PAUSE) &&
                             <>
-                                <div><StartButton loading={runState == State.STARTING} variant="contained" onClick={startHandle}>เริ่มการทำงาน</StartButton></div>
+                                <div><StartButton 
+                                    loading={runState == State.STARTING} 
+                                    variant="contained" 
+                                    onClick={startHandle}
+                                    disabled={preSetSpeed === 0}
+                                >เริ่มการทำงาน</StartButton></div>
                             </>
                         }
-                        {(runState == State.RUNNING || runState == State.PAUSEING || runState == State.PAUSE || runState == State.STOPING || runState == State.STOP) &&
+                        {(runState == State.RUNNING) &&
                             <>
-                                <div><PauseButton loading={runState == State.PAUSEING} disabled={runState == State.STOPING} variant="outlined" onClick={pauseHandle}>พักชั่วคราว</PauseButton></div>
-                                <div><StopButton loading={runState == State.STOPING} disabled={runState == State.PAUSEING} variant="contained" onClick={stopHandle}>หยุดการทำงาน</StopButton></div>
+                                <div><PauseButton 
+                                    loading={runState == State.PAUSEING} 
+                                    disabled={runState == State.STOPING} 
+                                    variant="outlined" 
+                                    onClick={pauseHandle}
+                                >พักชั่วคราว</PauseButton></div>
+                            </>
+                        }
+                        {(runState == State.RUNNING || runState == State.PAUSEING || runState == State.PAUSE) &&
+                            <>
+                                <div><StopButton 
+                                    loading={runState == State.STOPING} 
+                                    disabled={runState == State.PAUSEING} 
+                                    variant="contained" 
+                                    onClick={stopHandle}
+                                >หยุดการทำงาน</StopButton></div>
+                            </>
+                        }
+                        {(runState == State.STOP) &&
+                            <>
+                                <div>
+                                    <Link href={'/users/' + userId} passHref>
+                                        <BackButton 
+                                            variant="contained" 
+                                        >ย้อนกลับ</BackButton>
+                                    </Link>
+                                </div>
                             </>
                         }
                     </div>
@@ -356,31 +506,19 @@ export default function ControlPage() {
                                 yaxis: {
                                     max: 160,
                                     min: 60,
-                                }
+                                },
+                                xaxis: {
+                                    type: 'datetime',
+                                    labels: {
+                                      format: 'HH:mm:ss'
+                                    }
+                                  }
                             }}
                             series={[
                                 {
                                     name: "อัตราการเต้นของหัวใจ",
                                     type: 'area',
-                                    data: ([{
-                                        timestamp: 1,
-                                        value: 96
-                                    }, {
-                                        timestamp: 2,
-                                        value: 98
-                                    }, {
-                                        timestamp: 3,
-                                        value: 100
-                                    }, {
-                                        timestamp: 4,
-                                        value: 103
-                                    }, {
-                                        timestamp: 5,
-                                        value: 110
-                                    }]).map(a => ({
-                                        x: a.timestamp,
-                                        y: a.value
-                                    }))
+                                    data: heartRateLog
                                 }
                             ]}
                             type="area"
@@ -402,9 +540,7 @@ export default function ControlPage() {
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={cancelChangeSpeedHandle}>ยกเลิก</Button>
-                    <Button onClick={confirmChangeSpeedHandle} autoFocus>
-                        ยืนยัน
-                    </Button>
+                    <Button onClick={confirmChangeSpeedHandle} autoFocus>ยืนยัน</Button>
                 </DialogActions>
             </Dialog>
         </>
