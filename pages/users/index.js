@@ -87,7 +87,7 @@ export default function Users({ usersFromServer }) {
                                     <CardMedia
                                         component="img"
                                         sx={{ width: 200, height: 200 }}
-                                        image={item?.image || "/user.png"}
+                                        image={(item?.image && ("/api/upload/" + item?.image)) || "/user.png"}
                                         alt={item?.name || "?"}
                                     />
                                     <CardContent sx={{ flexGrow: 1 }}>

@@ -3,6 +3,7 @@ import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import Link from 'next/link'
 import { useRouter } from 'next/router';
+import axios from 'axios';
 
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
@@ -178,6 +179,58 @@ export default function UserDetail({ userInfoFromServer, logInfoFromServer }) {
         })
     };
 
+    const handleClickUploadNewImage = async () => {
+        let inp = document.createElement("input");
+        inp.setAttribute("type", "file");
+        inp.setAttribute("accept", "image/\*");
+        inp.addEventListener("change", async e => {
+            /*if (props.data?.image) {
+                await fetch(`/api/upload/${props.data?.image}`, {
+                    method: "DELETE",
+                });
+            }*/
+
+            const formData = new FormData();
+            formData.append("image", e.target.files[0]);
+
+            try {
+                let uploadImage = await axios.request({
+                    method: "POST",
+                    url: "/api/upload",
+                    headers: {
+                        "content-type": "multipart/form-data",
+                    },
+                    data: formData,
+                    onUploadProgress: p => {
+                        console.log("Image Upload Progress", p.loaded / p.total * 100.0);
+                    }
+                });
+
+                if (uploadImage.status !== 200) {
+                    throw uploadImage.status;
+                }
+
+                CallAPI({
+                    endpoint: "users/" + userInfo?.id,
+                    method: "PUT",
+                    data: {
+                        image: uploadImage.data.file,
+                    },
+                    auth: false
+                }).then(() => {
+                    let newUserInfo = { ...userInfo };
+                    newUserInfo.image = uploadImage.data.file;
+                    setUserInfo(newUserInfo);
+                }).catch(err => {
+                    console.log(err);
+                });
+            } catch (e) {
+                console.log(e);
+            }
+        })
+        inp.click();
+    }
+
     const [ weight, setWeight ] = React.useState("");
     const weightChangeHandle = e => setWeight(+e.target.value);
 
@@ -217,14 +270,14 @@ export default function UserDetail({ userInfoFromServer, logInfoFromServer }) {
                 <Grid item sx={{ textAlign: "center" }} pr={3}>
                     <Paper sx={{ marginBottom: 2, overflow: "hidden" }}>
                         <Image
-                            src={userInfo?.image || "/user.png"}
+                            src={(userInfo?.image && ("/api/upload/" + userInfo?.image)) || "/user.png"}
                             alt={userInfo?.name || ""}
                             width={200}
                             height={200}
                             layout="responsive"
                         />
                     </Paper>
-                    <Button variant="contained" startIcon={<PhotoCamera />} disableElevation>เปลี่ยนรูปโปรไฟล์</Button>
+                    <Button variant="contained" startIcon={<PhotoCamera />} onClick={handleClickUploadNewImage} disableElevation>เปลี่ยนรูปโปรไฟล์</Button>
                 </Grid>
                 <Grid item flexGrow={1}>
                     <Grid container spacing={3}>
@@ -415,7 +468,7 @@ export default function UserDetail({ userInfoFromServer, logInfoFromServer }) {
                                                     type: 'area',
                                                     data: logInfoFromServer.map(a => ({
                                                         x: new Date(a.date_of_start),
-                                                        y: a.weight
+                                                        y: (+a.weight).toFixed(0)
                                                     }))
                                                 },
                                                 {
@@ -438,7 +491,7 @@ export default function UserDetail({ userInfoFromServer, logInfoFromServer }) {
                                                         y: (raw_control_log => {
                                                             const controlLog = JSON.parse(raw_control_log);
                                                             const distance = +controlLog[controlLog.length - 1].distance;
-                                                            return ((distance / 0.79) * 1000).toFixed(2);
+                                                            return ((distance / 0.79) * 1000).toFixed(0);
                                                         })(a.control_log)
                                                     }))
                                                 },
@@ -450,7 +503,7 @@ export default function UserDetail({ userInfoFromServer, logInfoFromServer }) {
                                                         y: (raw_control_log => {
                                                             const controlLog = JSON.parse(raw_control_log);
                                                             const speed = MeanSample(controlLog.map(i => +i.speed));
-                                                            return speed;
+                                                            return speed.toFixed(0);
                                                         })(a.control_log)
                                                     }))
                                                 },
@@ -474,8 +527,8 @@ export default function UserDetail({ userInfoFromServer, logInfoFromServer }) {
                                                         x: new Date(a.date_of_start),
                                                         y: (raw_control_log => {
                                                             const controlLog = JSON.parse(raw_control_log);
-                                                            const speed = MeanSample(controlLog.map(i => +i.heartRate));
-                                                            return speed;
+                                                            const heartRate = MeanSample(controlLog.map(i => +i.heartRate));
+                                                            return heartRate.toFixed(0);
                                                         })(a.control_log)
                                                     }))
                                                 },
