@@ -207,6 +207,7 @@ export default function ControlPage() {
     const [ preSetSpeed, setPreSetSpeed ] = React.useState(0);
     const [ speedChangeing, setSpeedChangeing ] = React.useState(false);
     const [ timer, setTimer ] = React.useState(null);
+    const [ logDetail, setLogDetail ] = React.useState([ ]);
 
     const [openConfirmChangeSpeedDialog, setOpenConfirmChangeSpeedDialog] = React.useState(false);
 
@@ -288,8 +289,22 @@ export default function ControlPage() {
         socket.emit("control", {
             speed: 0,
         });
-        setRunState(State.STOP);
+        setRunState(State.STOPING);
         // router.push("/users/" + userId);
+
+        CallAPI({
+            endpoint: "log/" + logId,
+            method: "PUT",
+            data: {
+                date_of_end: new Date().toISOString(),
+                control_log: JSON.stringify(logDetail),
+                ended: 1
+            }
+        }).then(async ({ id }) => {
+            setRunState(State.STOP);
+        }).catch(err => {
+            console.log(err);
+        });
     }
 
     const [sensorValue, setSensorValue] = React.useState({
@@ -324,7 +339,7 @@ export default function ControlPage() {
             console.log("runState", runState);
 
             setSensorValue(data);
-            if (data?.speed > 0 && runState === State.BEFORE_START) {
+            if ((data?.speed > 0 || data?.distance > 0) && runState === State.BEFORE_START) {
                 socket.emit("control", {
                     speed: 0,
                     reset: true
@@ -342,6 +357,15 @@ export default function ControlPage() {
         if (runState !== State.RUNNING) {
             return;
         }
+
+        let newLogDetail = [ ...logDetail ];
+        newLogDetail.push({
+            time: new Date(),
+            heartRate: sensorValue?.heartRate,
+            distance: sensorValue?.distance,
+            speed: sensorValue?.speed,
+        });
+        setLogDetail(newLogDetail);
 
         let newHeartRateLog = [ ...heartRateLog ];
         newHeartRateLog.push({
@@ -512,7 +536,7 @@ export default function ControlPage() {
                                     labels: {
                                       format: 'HH:mm:ss'
                                     }
-                                  }
+                                }
                             }}
                             series={[
                                 {

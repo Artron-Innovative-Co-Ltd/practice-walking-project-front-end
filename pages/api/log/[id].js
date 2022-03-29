@@ -5,7 +5,7 @@ const handler = nextConnect();
 
 /* Update user */
 handler.put(async (req, res) => {
-    const userId = req.query.id;
+    const logId = req.query.id;
 
     const userInfo = Object.assign(
         {}, 
@@ -15,10 +15,12 @@ handler.put(async (req, res) => {
     let fieldUpdate = [ ];
 
     for (const fieldName of [
-        "name",
-        "date_of_birth",
-        "height",
-        "image"
+        "uid",
+        "date_of_start",
+        "date_of_end",
+        "control_log",
+        "weight",
+        "ended"
     ]) {
         if (typeof userInfo[fieldName] !== "undefined") {
             fieldUpdate.push({ 
@@ -31,8 +33,8 @@ handler.put(async (req, res) => {
     const db = await DatabaseConnect();
 
     db.get(
-        `UPDATE users SET ${fieldUpdate.map(item => item.field + " = ?")} WHERE id = ?;`,
-        fieldUpdate.map(item => item.value).concat([ userId ]),
+        `UPDATE log SET ${fieldUpdate.map(item => item.field + " = ?")} WHERE id = ?;`,
+        fieldUpdate.map(item => item.value).concat([ logId ]),
         function(err) {
             db.close();
 
@@ -47,14 +49,14 @@ handler.put(async (req, res) => {
     );
 });
 
-/* Delete user */
+/* Delete log */
 handler.delete(async (req, res) => {
     const userId = req.query.id;
 
     const db = await DatabaseConnect();
 
     db.get(
-        "DELETE FROM users WHERE id = ?;",
+        "DELETE FROM log WHERE id = ?;",
         [
             userId,
         ], 

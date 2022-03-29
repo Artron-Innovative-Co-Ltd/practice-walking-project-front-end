@@ -63,6 +63,43 @@ const TextFieldCustom = props => <TextField
     {...props}
 />;
 
+const MeanSample = (data) => {
+    let sum = 0.0, mean = 0.0;
+  
+    sum = 0;
+    mean = 0;
+    for (let i=0;i<data.length;i++) {
+      sum += data[i];
+    }
+    mean = sum / data.length;
+  
+    // Calc SD
+    sum = 0.0;
+    for (let i=0;i<data.length;i++) {
+      sum += Math.pow(data[i] - mean, 2);
+    }
+    let SD = Math.sqrt(sum / (data.length - 1));
+    
+  
+    // Calc Normal Mean
+    sum = 0;
+    let windowMin = mean - SD;
+    let windowMax = mean + SD;
+    let nGot = 0;
+    let a = 0;
+    for (let i=0;i<data.length;i++) {
+      a = data[i];
+      if ((a >= windowMin) && (a <= windowMax)) { // Check value are window
+        sum += a;
+        nGot++;
+      }
+    }
+    mean = sum / nGot;
+    return mean;
+}
+
+const zeroPad = (num, places) => String(num).padStart(places, '0');
+
 export default function UserDetail({ userInfoFromServer, logInfoFromServer }) {
     const router = useRouter();
 
@@ -120,78 +157,6 @@ export default function UserDetail({ userInfoFromServer, logInfoFromServer }) {
         setSelectedIndex(index);
     };
 
-    const options = {
-        chart: {
-            height: "100%",
-            type: 'area',
-            toolbar: {
-                show: false,
-            }
-        },
-        /*
-        dataLabels: {
-            enabled: true
-        },
-        stroke: {
-            curve: 'smooth',
-            width: 1,
-        },
-        xaxis: {
-            type: 'datetime',*/
-            /* categories: (data || []).map(a => a.timestamp), */
-            /*labels: {
-                show: true,
-                datetimeUTC: false,
-            },
-            axisBorder: {
-                show: true,
-            },
-            axisTicks: {
-                show: true,
-            },
-            tooltip: {
-                enabled: false,
-            }
-        },
-        yaxis: {
-            labels: {
-                show: true,
-                formatter: (val, index) => val.toFixed(2) + " °C"
-            },
-            axisBorder: {
-                show: true,
-            },
-            axisTicks: {
-                show: true,
-            },
-        },
-        grid: {
-            show: false,
-        },
-        tooltip: {
-            x: {
-                format: 'dd/MM/yy HH:mm:ss'
-            },*/
-            /*custom: function ({ series, seriesIndex, dataPointIndex, w }) {
-                let t = 0;
-                try {
-                    t = data[dataPointIndex].timestamp;
-                } catch(e) {
-                }
-                // console.log(w.globals.labels, t, dataPointIndex, (data || []).map(a => a.timestamp));
-                return `<div class="arrow_box"><span>${new Date(t).toLocaleTimeString()}: ${series[seriesIndex][dataPointIndex]} °C</span></div>`
-            }*/
-        /*},
-        colors: [
-            "#00ab55",
-            "#FF0000",
-            "#0000FF"
-        ],*/
-        fill: {
-            type: ['gradient', 'solid', 'solid'],
-            opacity: [0.1, 1, 1],
-        },
-    };
 
     const [ showDeleteUserDialog, setShowDeleteUserDialog] = React.useState(false);
     const handleCloseDeleteUserDialog = () => {
@@ -216,6 +181,29 @@ export default function UserDetail({ userInfoFromServer, logInfoFromServer }) {
     const [ weight, setWeight ] = React.useState("");
     const weightChangeHandle = e => setWeight(+e.target.value);
 
+    const totalDistance = logInfoFromServer.map(logItem => {
+        const controlLog = JSON.parse(logItem?.control_log);
+        const distance = +controlLog[controlLog.length - 1].distance;
+        return distance;
+    }).reduce((partialSum, a) => partialSum + a, 0);
+
+    const totalRunTimeInSec = logInfoFromServer.map(logItem => {
+        const controlLog = JSON.parse(logItem?.control_log);
+        const logTimeUseInSec = (new Date(controlLog[controlLog.length - 1]?.time).getTime() / 1000) - (new Date(controlLog[0]?.time).getTime() / 1000);
+        return logTimeUseInSec;
+    }).reduce((partialSum, a) => partialSum + a, 0);
+
+    const totalCalorie = logInfoFromServer.map(logItem => {
+        const controlLog = JSON.parse(logItem?.control_log);
+        const distance = +controlLog[controlLog.length - 1].distance;
+        const weight = logItem.weight;
+        return distance * weight * 1.036;
+    }).reduce((partialSum, a) => partialSum + a, 0);
+
+    const logSelect = logInfoFromServer?.[selectedIndex - 1];
+    const controlLog = JSON.parse(logInfoFromServer?.[selectedIndex - 1]?.control_log || "[]");
+    const logTimeUseInSec = (new Date(controlLog[controlLog.length - 1]?.time).getTime() / 1000) - (new Date(controlLog[0]?.time).getTime() / 1000);
+    
     return (
         <>
             <AppBarCustom
@@ -343,20 +331,7 @@ export default function UserDetail({ userInfoFromServer, logInfoFromServer }) {
                                         </ListSubheader>
                                     }
                                 >
-                                    {([
-                                        {
-                                            date: "15/3/2565",
-                                            runTime: 10
-                                        },
-                                        {
-                                            date: "16/3/2565",
-                                            runTime: 8
-                                        },
-                                        {
-                                            date: "17/3/2565",
-                                            runTime: 12
-                                        },
-                                    ]).map((item, index) =>
+                                    {logInfoFromServer.map((item, index) =>
                                         <ListItemButton
                                             selected={selectedIndex === (index + 1)}
                                             onClick={(event) => handleListItemClick(event, index + 1)}
@@ -364,7 +339,11 @@ export default function UserDetail({ userInfoFromServer, logInfoFromServer }) {
                                             <ListItemAvatar>
                                                 <Avatar sx={{ bgcolor: "#2499ef" }}>{index + 1}</Avatar>
                                             </ListItemAvatar>
-                                            <ListItemText primary={`${item?.date || "Unknow"} (${item?.runTime || "Unknow"} นาที)`} />
+                                            <ListItemText primary={`${new Date(item?.date_of_start).toLocaleDateString() || "Unknow"} (${(raw_control_log => {
+                                                            const controlLog = JSON.parse(raw_control_log);
+                                                            const logTimeUseInSec = (new Date(controlLog[controlLog.length - 1]?.time).getTime() / 1000) - (new Date(controlLog[0]?.time).getTime() / 1000);
+                                                            return (Math.round(logTimeUseInSec + 1) / 60).toFixed(0);
+                                                        })(item?.control_log)} นาที)`} />
                                         </ListItemButton>
                                     )}
                                 </List>
@@ -375,28 +354,28 @@ export default function UserDetail({ userInfoFromServer, logInfoFromServer }) {
                                 <Grid item xs={6} lg={3}>
                                     <BoxInfo
                                         title={"ระยะทางรวม"}
-                                        value={"15"}
+                                        value={totalDistance.toFixed(2)}
                                         unit={"km"}
                                     />
                                 </Grid>
                                 <Grid item xs={6} lg={3}>
                                     <BoxInfo
                                         title={"จำนวนก้าวรวม"}
-                                        value={"15"}
+                                        value={(((totalDistance || 0) / 0.79) * 1000).toFixed(0)}
                                         unit={"Step"}
                                     />
                                 </Grid>
                                 <Grid item xs={6} lg={3}>
                                     <BoxInfo
                                         title={"เวลารวม"}
-                                        value={"180"}
+                                        value={zeroPad(Math.floor(totalRunTimeInSec / 60), 2) + ":" + zeroPad(Math.ceil(totalRunTimeInSec) % 60, 2)}
                                         unit={"นาที"}
                                     />
                                 </Grid>
                                 <Grid item xs={6} lg={3}>
                                     <BoxInfo
                                         title={"เผาผลานแคลเลอรี่รวม"}
-                                        value={"15"}
+                                        value={totalCalorie.toFixed(0)}
                                         unit={"kcal"}
                                     />
                                 </Grid>
@@ -410,105 +389,94 @@ export default function UserDetail({ userInfoFromServer, logInfoFromServer }) {
                                                     toolbar: {
                                                         show: false,
                                                     }
+                                                },
+                                                xaxis: {
+                                                    type: 'datetime',
+                                                    labels: {
+                                                      format: 'dd/mm/yyyy'
+                                                    }
                                                 }
                                             }}
                                             series={[
                                                 {
                                                     name: "เวลา",
                                                     type: 'area',
-                                                    data: ([{
-                                                        timestamp: 1,
-                                                        value: 10
-                                                    },{
-                                                        timestamp: 2,
-                                                        value: 12
-                                                    }]).map(a => ({
-                                                        x: a.timestamp,
-                                                        y: a.value
+                                                    data: logInfoFromServer.map(a => ({
+                                                        x: new Date(a.date_of_start),
+                                                        y: (raw_control_log => {
+                                                            const controlLog = JSON.parse(raw_control_log);
+                                                            const logTimeUseInSec = (new Date(controlLog[controlLog.length - 1]?.time).getTime() / 1000) - (new Date(controlLog[0]?.time).getTime() / 1000);
+                                                            return (Math.round(logTimeUseInSec + 1) / 60).toFixed(0);
+                                                        })(a.control_log)
                                                     }))
                                                 },
                                                 {
                                                     name: "น้ำหนัก",
                                                     type: 'area',
-                                                    data: ([{
-                                                        timestamp: 1,
-                                                        value: 10
-                                                    },{
-                                                        timestamp: 2,
-                                                        value: 12
-                                                    }]).map(a => ({
-                                                        x: a.timestamp,
-                                                        y: a.value
+                                                    data: logInfoFromServer.map(a => ({
+                                                        x: new Date(a.date_of_start),
+                                                        y: a.weight
                                                     }))
                                                 },
                                                 {
                                                     name: "ระยะทาง",
                                                     type: 'area',
-                                                    data: ([{
-                                                        timestamp: 1,
-                                                        value: 10
-                                                    },{
-                                                        timestamp: 2,
-                                                        value: 12
-                                                    }]).map(a => ({
-                                                        x: a.timestamp,
-                                                        y: a.value
+                                                    data: logInfoFromServer.map(a => ({
+                                                        x: new Date(a.date_of_start),
+                                                        y: (raw_control_log => {
+                                                            const controlLog = JSON.parse(raw_control_log);
+                                                            const distance = +controlLog[controlLog.length - 1].distance;
+                                                            return distance.toFixed(2);
+                                                        })(a.control_log)
                                                     }))
                                                 },
                                                 {
                                                     name: "จำนวนก้าว",
                                                     type: 'area',
-                                                    data: ([{
-                                                        timestamp: 1,
-                                                        value: 10
-                                                    },{
-                                                        timestamp: 2,
-                                                        value: 12
-                                                    }]).map(a => ({
-                                                        x: a.timestamp,
-                                                        y: a.value
+                                                    data: logInfoFromServer.map(a => ({
+                                                        x: new Date(a.date_of_start),
+                                                        y: (raw_control_log => {
+                                                            const controlLog = JSON.parse(raw_control_log);
+                                                            const distance = +controlLog[controlLog.length - 1].distance;
+                                                            return ((distance / 0.79) * 1000).toFixed(2);
+                                                        })(a.control_log)
                                                     }))
                                                 },
                                                 {
                                                     name: "ความเร็ว",
                                                     type: 'area',
-                                                    data: ([{
-                                                        timestamp: 1,
-                                                        value: 10
-                                                    },{
-                                                        timestamp: 2,
-                                                        value: 12
-                                                    }]).map(a => ({
-                                                        x: a.timestamp,
-                                                        y: a.value
+                                                    data: logInfoFromServer.map(a => ({
+                                                        x: new Date(a.date_of_start),
+                                                        y: (raw_control_log => {
+                                                            const controlLog = JSON.parse(raw_control_log);
+                                                            const speed = MeanSample(controlLog.map(i => +i.speed));
+                                                            return speed;
+                                                        })(a.control_log)
                                                     }))
                                                 },
                                                 {
                                                     name: "แคลเลอรี่",
                                                     type: 'area',
-                                                    data: ([{
-                                                        timestamp: 1,
-                                                        value: 10
-                                                    },{
-                                                        timestamp: 2,
-                                                        value: 12
-                                                    }]).map(a => ({
-                                                        x: a.timestamp,
-                                                        y: a.value
+                                                    data: logInfoFromServer.map(a => ({
+                                                        x: new Date(a.date_of_start),
+                                                        y: ((raw_control_log, logItem) => {
+                                                            const controlLog = JSON.parse(raw_control_log);
+                                                            const distance = +controlLog[controlLog.length - 1].distance;
+                                                            const weight = logItem.weight;
+                                                            return (distance * weight * 1.036).toFixed(0);
+                                                        })(a.control_log, a)
                                                     }))
                                                 },
                                                 {
                                                     name: "อัตราการเต้นของหัวใจ",
                                                     type: 'area',
-                                                    data: ([{
-                                                        timestamp: 1,
-                                                        value: 10
-                                                    },{
-                                                        timestamp: 2,
-                                                        value: 12
-                                                    }]).map(a => ({
-                                                        x: a.timestamp,
-                                                        y: a.value
+                                                    data: logInfoFromServer.map(a => ({
+                                                        x: new Date(a.date_of_start),
+                                                        y: (raw_control_log => {
+                                                            const controlLog = JSON.parse(raw_control_log);
+                                                            const speed = MeanSample(controlLog.map(i => +i.heartRate));
+                                                            return speed;
+                                                        })(a.control_log)
                                                     }))
                                                 },
                                             ]}
@@ -523,57 +491,57 @@ export default function UserDetail({ userInfoFromServer, logInfoFromServer }) {
                                 <Grid item xs={6} lg={3}>
                                     <BoxInfo
                                         title={"น้ำหนัก"}
-                                        value={"15"}
+                                        value={logSelect?.weight || "?"}
                                         unit={"kg"}
                                     />
                                 </Grid>
                                 <Grid item xs={6} lg={3}>
                                     <BoxInfo
                                         title={"อัตราการเต้นของหัวใจเฉลี่ย"}
-                                        value={"15"}
+                                        value={MeanSample(controlLog.map(i => +i?.heartRate)).toFixed(0)}
                                         unit={"bmp"}
                                     />
                                 </Grid>
                                 <Grid item xs={6} lg={3}>
                                     <BoxInfo
                                         title={"ความเร็วเฉลี่ย"}
-                                        value={"15"}
+                                        value={MeanSample(controlLog.map(i => +i?.speed)).toFixed(2)}
                                         unit={"km"}
                                     />
                                 </Grid>
                                 <Grid item xs={6} lg={3}>
                                     <BoxInfo
-                                        title={"การเผาผลานเฉลี่ย"}
-                                        value={"15"}
+                                        title={"การเผาผลาน"}
+                                        value={(controlLog[controlLog.length - 1]?.distance * logSelect?.weight * 1.036).toFixed(2)}
                                         unit={"kcal"}
                                     />
                                 </Grid>
                                 <Grid item xs={6} lg={3}>
                                     <BoxInfo
                                         title={"ระยะทาง"}
-                                        value={"15"}
-                                        unit={"kcal"}
+                                        value={(+controlLog[controlLog.length - 1]?.distance).toFixed(3)}
+                                        unit={"km"}
                                     />
                                 </Grid>
                                 <Grid item xs={6} lg={3}>
                                     <BoxInfo
                                         title={"เวลาเริ่ม"}
-                                        value={"15:00"}
-                                        unit={"น."}
+                                        value={new Date(controlLog[0]?.time).toLocaleTimeString()}
+                                        unit={""}
                                     />
                                 </Grid>
                                 <Grid item xs={6} lg={3}>
                                     <BoxInfo
                                         title={"เวลาจบ"}
-                                        value={"15:30"}
-                                        unit={"น."}
+                                        value={new Date(new Date(controlLog[controlLog.length - 1]?.time).getTime() + 1000).toLocaleTimeString()}
+                                        unit={""}
                                     />
                                 </Grid>
                                 <Grid item xs={6} lg={3}>
                                     <BoxInfo
                                         title={"รวมเวลา"}
-                                        value={"30"}
-                                        unit={"นาที"}
+                                        value={zeroPad(Math.floor(logTimeUseInSec / 60), 2) + ":" + zeroPad(Math.ceil(logTimeUseInSec) % 60, 2)}
+                                        unit={""}
                                     />
                                 </Grid>
                                 <Grid item xs={12}>
@@ -586,63 +554,45 @@ export default function UserDetail({ userInfoFromServer, logInfoFromServer }) {
                                                     toolbar: {
                                                         show: false,
                                                     }
+                                                },
+                                                xaxis: {
+                                                    type: 'datetime',
+                                                    labels: {
+                                                      format: 'HH:mm:ss'
+                                                    }
                                                 }
                                             }}
                                             series={[
                                                 {
                                                     name: "ความเร็ว",
                                                     type: 'area',
-                                                    data: ([{
-                                                        timestamp: 1,
-                                                        value: 10
-                                                    },{
-                                                        timestamp: 2,
-                                                        value: 12
-                                                    }]).map(a => ({
-                                                        x: a.timestamp,
-                                                        y: a.value
+                                                    data: controlLog.map(a => ({
+                                                        x: new Date(a?.time),
+                                                        y: a.speed
                                                     }))
                                                 },
                                                 {
                                                     name: "อัตราการเต้นของหัวใจ",
                                                     type: 'area',
-                                                    data: ([{
-                                                        timestamp: 1,
-                                                        value: 10
-                                                    },{
-                                                        timestamp: 2,
-                                                        value: 12
-                                                    }]).map(a => ({
-                                                        x: a.timestamp,
-                                                        y: a.value
+                                                    data: controlLog.map(a => ({
+                                                        x: new Date(a?.time),
+                                                        y: a.heartRate
                                                     }))
                                                 },
                                                 {
                                                     name: "ระยะทาง",
                                                     type: 'area',
-                                                    data: ([{
-                                                        timestamp: 1,
-                                                        value: 10
-                                                    },{
-                                                        timestamp: 2,
-                                                        value: 12
-                                                    }]).map(a => ({
-                                                        x: a.timestamp,
-                                                        y: a.value
+                                                    data: controlLog.map(a => ({
+                                                        x: new Date(a?.time),
+                                                        y: a.distance
                                                     }))
                                                 },
                                                 {
                                                     name: "การเผาผลานเคอรี่",
                                                     type: 'area',
-                                                    data: ([{
-                                                        timestamp: 1,
-                                                        value: 10
-                                                    },{
-                                                        timestamp: 2,
-                                                        value: 12
-                                                    }]).map(a => ({
-                                                        x: a.timestamp,
-                                                        y: a.value
+                                                    data: controlLog.map(a => ({
+                                                        x: new Date(a?.time),
+                                                        y: (+a.distance * +logSelect?.weight * 1.036).toFixed(2)
                                                     }))
                                                 },
                                             ]}
@@ -735,7 +685,7 @@ export async function getServerSideProps({ req, res, query }) {
         ]
     );
 
-    const logInfo = await db.getPromise(
+    const logInfo = await db.allPromise(
         "SELECT * FROM log WHERE uid = ?", 
         [ 
             userId
