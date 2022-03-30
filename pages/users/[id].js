@@ -238,7 +238,7 @@ export default function UserDetail({ userInfoFromServer, logInfoFromServer }) {
 
     const totalDistance = logInfoFromServer.map(logItem => {
         const controlLog = JSON.parse(logItem?.control_log);
-        const distance = +controlLog[controlLog.length - 1].distance;
+        const distance = +controlLog[controlLog.length - 1]?.distance || 0;
         return distance;
     }).reduce((partialSum, a) => partialSum + a, 0);
 
@@ -250,7 +250,7 @@ export default function UserDetail({ userInfoFromServer, logInfoFromServer }) {
 
     const totalCalorie = logInfoFromServer.map(logItem => {
         const controlLog = JSON.parse(logItem?.control_log);
-        const distance = +controlLog[controlLog.length - 1].distance;
+        const distance = +controlLog[controlLog.length - 1]?.distance || 0;
         const weight = logItem.weight;
         return distance * weight * 1.036;
     }).reduce((partialSum, a) => partialSum + a, 0);
@@ -610,7 +610,7 @@ export default function UserDetail({ userInfoFromServer, logInfoFromServer }) {
                                 <Grid item xs={6} lg={3}>
                                     <BoxInfo
                                         title={"ระยะทาง"}
-                                        value={(+controlLog[controlLog.length - 1]?.distance).toFixed(3)}
+                                        value={(+controlLog[controlLog.length - 1]?.distance || 0).toFixed(3)}
                                         unit={"km"}
                                     />
                                 </Grid>
