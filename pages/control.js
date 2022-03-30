@@ -14,12 +14,14 @@ import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogContentText from '@mui/material/DialogContentText';
 import DialogTitle from '@mui/material/DialogTitle';
+import Grid from '@mui/material/Grid';
 
 // Icon
 import HartrateIcon from '../public/images/cardiogram.svg';
 import RoadIcon from '../public/images/road.svg';
 import CalorieIcon from '../public/images/calories-calculator.svg';
 import FootIcon from '../public/images/footsteps-silhouette-variant.svg';
+import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 
 import SocketIO from 'socket.io-client';
 
@@ -358,6 +360,9 @@ export default function ControlPage() {
                     setPreSetSpeed(data?.speed || 0);
                 }*/
             }
+            if (data?.emergency === 1 && runState === State.RUNNING) {
+                stopHandle();
+            }
         });
     }, [ runState, socket, speedChangeing ]); 
 
@@ -467,7 +472,7 @@ export default function ControlPage() {
                                 onChangeCommitted={speedChangeCommittedHandle}
                                 valueLabelDisplay="auto"
                                 min={0}
-                                max={40}
+                                max={10}
                                 onDragEnter={startSpeedChangeHandle}
                             />}
                         </div>
@@ -571,6 +576,20 @@ export default function ControlPage() {
                     <Button onClick={cancelChangeSpeedHandle}>ยกเลิก</Button>
                     <Button onClick={confirmChangeSpeedHandle} autoFocus>ยืนยัน</Button>
                 </DialogActions>
+            </Dialog>
+            <Dialog
+                open={sensorValue?.emergency === 1}
+                onClose={() => 1}
+            >
+                <DialogTitle>
+                    <Grid container alignItems={"center"}>
+                        <ErrorOutlineIcon sx={{ color: "rgb(239, 83, 80)" }} />
+                        <Grid item pl={1} sx={{ color: "rgb(239, 83, 80)" }}>หยุดฉุกเฉิน</Grid>
+                    </Grid>
+                </DialogTitle>
+                <DialogContent>
+                    <DialogContentText>การทำกายภาพรอบนี้จะถูกยกเลิกอัตโนมัติ ปลดสวิตช์ฉุกเฉินเพื่อดำเนินการต่อ</DialogContentText>
+                </DialogContent>
             </Dialog>
         </>
     );
