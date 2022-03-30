@@ -41,6 +41,8 @@ import AppBarCustom from '../../src/AppBarCustom';
 import CalculateAge from '../../src/CalculateAge';
 import CallAPI from '../../src/WebCallAPI';
 
+import SocketIO from 'socket.io-client';
+
 function BoxInfo({ title, value, unit }) {
     return (
         <Paper sx={{ display: "flex", flexDirection: "column", minHeight: 200, padding: 2 }}>
@@ -257,6 +259,40 @@ export default function UserDetail({ userInfoFromServer, logInfoFromServer }) {
     const controlLog = JSON.parse(logInfoFromServer?.[selectedIndex - 1]?.control_log || "[]");
     const logTimeUseInSec = (new Date(controlLog[controlLog.length - 1]?.time).getTime() / 1000) - (new Date(controlLog[0]?.time).getTime() / 1000);
     
+    const [ socket, setSocket ] = React.useState(null);
+    const [ pauseUpdateWeight, setPauseUpdateWeight ] = React.useState(false);
+
+    React.useEffect(() => {
+        const sock = SocketIO("http://localhost:3002", {
+            transports: ['websocket']
+        });
+
+        setSocket(sock);
+
+        return () => {
+            sock.disconnect();
+        }
+    }, [ ]);
+
+    React.useEffect(() => {
+        if (!socket) {
+            return;
+        }
+
+        socket.off("value_update");
+        if (!pauseUpdateWeight) {
+            socket.on("value_update", data => {
+                if (data?.weight > 30) {
+                    setWeight(data?.weight || 0);
+                }
+            });
+        }
+    }, [ socket, pauseUpdateWeight ]);
+
+    const eventToPauseUpdateWeight = () => {
+        setPauseUpdateWeight(true);
+    }
+
     return (
         <>
             <AppBarCustom
@@ -328,6 +364,8 @@ export default function UserDetail({ userInfoFromServer, logInfoFromServer }) {
                                         variant="outlined"
                                         value={weight}
                                         onChange={weightChangeHandle}
+                                        onFocus={eventToPauseUpdateWeight}
+                                        helperText={!pauseUpdateWeight && "* ข้อมูลน้ำหนักจากเซ็นเซอร์"}
                                     />
                                 </Grid>
                                 <Grid item xs={12}>
