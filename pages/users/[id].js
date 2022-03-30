@@ -516,7 +516,7 @@ export default function UserDetail({ userInfoFromServer, logInfoFromServer }) {
                                                         x: new Date(a.date_of_start),
                                                         y: (raw_control_log => {
                                                             const controlLog = JSON.parse(raw_control_log);
-                                                            const distance = +controlLog[controlLog.length - 1].distance;
+                                                            const distance = +controlLog[controlLog.length - 1]?.distance || 0;
                                                             return distance.toFixed(2);
                                                         })(a.control_log)
                                                     }))
@@ -528,7 +528,7 @@ export default function UserDetail({ userInfoFromServer, logInfoFromServer }) {
                                                         x: new Date(a.date_of_start),
                                                         y: (raw_control_log => {
                                                             const controlLog = JSON.parse(raw_control_log);
-                                                            const distance = +controlLog[controlLog.length - 1].distance;
+                                                            const distance = +controlLog[controlLog.length - 1]?.distance || 0;
                                                             return ((distance / 0.79) * 1000).toFixed(0);
                                                         })(a.control_log)
                                                     }))
@@ -540,7 +540,7 @@ export default function UserDetail({ userInfoFromServer, logInfoFromServer }) {
                                                         x: new Date(a.date_of_start),
                                                         y: (raw_control_log => {
                                                             const controlLog = JSON.parse(raw_control_log);
-                                                            const speed = MeanSample(controlLog.map(i => +i.speed));
+                                                            const speed = MeanSample(controlLog.map(i => +i?.speed || 0));
                                                             return speed.toFixed(0);
                                                         })(a.control_log)
                                                     }))
@@ -552,8 +552,8 @@ export default function UserDetail({ userInfoFromServer, logInfoFromServer }) {
                                                         x: new Date(a.date_of_start),
                                                         y: ((raw_control_log, logItem) => {
                                                             const controlLog = JSON.parse(raw_control_log);
-                                                            const distance = +controlLog[controlLog.length - 1].distance;
-                                                            const weight = logItem.weight;
+                                                            const distance = +controlLog[controlLog.length - 1]?.distance || 0;
+                                                            const weight = logItem?.weight || 0;
                                                             return (distance * weight * 1.036).toFixed(0);
                                                         })(a.control_log, a)
                                                     }))
@@ -565,7 +565,7 @@ export default function UserDetail({ userInfoFromServer, logInfoFromServer }) {
                                                         x: new Date(a.date_of_start),
                                                         y: (raw_control_log => {
                                                             const controlLog = JSON.parse(raw_control_log);
-                                                            const heartRate = MeanSample(controlLog.map(i => +i.heartRate));
+                                                            const heartRate = MeanSample(controlLog.map(i => +i?.heartRate || 0));
                                                             return heartRate.toFixed(0);
                                                         })(a.control_log)
                                                     }))
@@ -603,7 +603,7 @@ export default function UserDetail({ userInfoFromServer, logInfoFromServer }) {
                                 <Grid item xs={6} lg={3}>
                                     <BoxInfo
                                         title={"การเผาผลาน"}
-                                        value={(controlLog[controlLog.length - 1]?.distance * logSelect?.weight * 1.036).toFixed(2)}
+                                        value={((controlLog[controlLog.length - 1]?.distance || 0) * (logSelect?.weight || 0) * 1.036).toFixed(2)}
                                         unit={"kcal"}
                                     />
                                 </Grid>
