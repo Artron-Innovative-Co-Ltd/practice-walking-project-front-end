@@ -263,7 +263,15 @@ export default function UserDetail({ userInfoFromServer, logInfoFromServer }) {
     const [ pauseUpdateWeight, setPauseUpdateWeight ] = React.useState(false);
 
     React.useEffect(() => {
-        const sock = SocketIO("http://localhost:3002", {
+        let hostname;
+        if (typeof window !== 'undefined') {
+            hostname = window.location.hostname;
+        } else {
+            hostname = "127.0.0.1";
+        }
+        // console.log(hostname);
+
+        const sock = SocketIO("http://" + hostname + ":3002", {
             transports: ['websocket']
         });
 

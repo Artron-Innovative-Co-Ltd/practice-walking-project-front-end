@@ -315,7 +315,15 @@ export default function ControlPage() {
     React.useEffect(() => {
         let socketIo;
         if (!socket) {
-            socketIo = SocketIO("http://localhost:3002", {
+            let hostname;
+            if (typeof window !== 'undefined') {
+                hostname = window.location.hostname;
+            } else {
+                hostname = "127.0.0.1";
+            }
+            // console.log(hostname);
+                
+            socketIo = SocketIO("http://" + hostname + ":3002", {
                 transports: ['websocket']
             });
             setSocket(socketIo);
