@@ -237,19 +237,19 @@ export default function UserDetail({ userInfoFromServer, logInfoFromServer }) {
     const weightChangeHandle = e => setWeight(+e.target.value);
 
     const totalDistance = logInfoFromServer.map(logItem => {
-        const controlLog = JSON.parse(logItem?.control_log);
+        const controlLog = JSON.parse(logItem?.control_log || "[]");
         const distance = +controlLog[controlLog.length - 1]?.distance || 0;
         return distance;
     }).reduce((partialSum, a) => partialSum + a, 0);
 
     const totalRunTimeInSec = logInfoFromServer.map(logItem => {
-        const controlLog = JSON.parse(logItem?.control_log);
+        const controlLog = JSON.parse(logItem?.control_log || "[]");
         const logTimeUseInSec = (new Date(controlLog[controlLog.length - 1]?.time).getTime() / 1000) - (new Date(controlLog[0]?.time).getTime() / 1000);
         return logTimeUseInSec;
     }).reduce((partialSum, a) => partialSum + a, 0);
 
     const totalCalorie = logInfoFromServer.map(logItem => {
-        const controlLog = JSON.parse(logItem?.control_log);
+        const controlLog = JSON.parse(logItem?.control_log || "[]");
         const distance = +controlLog[controlLog.length - 1]?.distance || 0;
         const weight = logItem.weight;
         return distance * weight * 1.036;
@@ -439,7 +439,7 @@ export default function UserDetail({ userInfoFromServer, logInfoFromServer }) {
                                                 <Avatar sx={{ bgcolor: "#2499ef" }}>{index + 1}</Avatar>
                                             </ListItemAvatar>
                                             <ListItemText primary={`${new Date(item?.date_of_start).toLocaleDateString() || "Unknow"} (${(raw_control_log => {
-                                                            const controlLog = JSON.parse(raw_control_log);
+                                                            const controlLog = JSON.parse(raw_control_log || "[]");
                                                             const logTimeUseInSec = (new Date(controlLog[controlLog.length - 1]?.time).getTime() / 1000) - (new Date(controlLog[0]?.time).getTime() / 1000);
                                                             return (Math.round(logTimeUseInSec + 1) / 60).toFixed(0);
                                                         })(item?.control_log)} นาที)`} />
@@ -503,7 +503,7 @@ export default function UserDetail({ userInfoFromServer, logInfoFromServer }) {
                                                     data: logInfoFromServer.map(a => ({
                                                         x: new Date(a.date_of_start),
                                                         y: (raw_control_log => {
-                                                            const controlLog = JSON.parse(raw_control_log);
+                                                            const controlLog = JSON.parse(raw_control_log || "[]");
                                                             const logTimeUseInSec = (new Date(controlLog[controlLog.length - 1]?.time).getTime() / 1000) - (new Date(controlLog[0]?.time).getTime() / 1000);
                                                             return (Math.round(logTimeUseInSec + 1) / 60).toFixed(0);
                                                         })(a.control_log)
@@ -523,7 +523,7 @@ export default function UserDetail({ userInfoFromServer, logInfoFromServer }) {
                                                     data: logInfoFromServer.map(a => ({
                                                         x: new Date(a.date_of_start),
                                                         y: (raw_control_log => {
-                                                            const controlLog = JSON.parse(raw_control_log);
+                                                            const controlLog = JSON.parse(raw_control_log || "[]");
                                                             const distance = +controlLog[controlLog.length - 1]?.distance || 0;
                                                             return distance.toFixed(2);
                                                         })(a.control_log)
@@ -535,7 +535,7 @@ export default function UserDetail({ userInfoFromServer, logInfoFromServer }) {
                                                     data: logInfoFromServer.map(a => ({
                                                         x: new Date(a.date_of_start),
                                                         y: (raw_control_log => {
-                                                            const controlLog = JSON.parse(raw_control_log);
+                                                            const controlLog = JSON.parse(raw_control_log || "[]");
                                                             const distance = +controlLog[controlLog.length - 1]?.distance || 0;
                                                             return ((distance / 0.79) * 1000).toFixed(0);
                                                         })(a.control_log)
@@ -547,7 +547,7 @@ export default function UserDetail({ userInfoFromServer, logInfoFromServer }) {
                                                     data: logInfoFromServer.map(a => ({
                                                         x: new Date(a.date_of_start),
                                                         y: (raw_control_log => {
-                                                            const controlLog = JSON.parse(raw_control_log);
+                                                            const controlLog = JSON.parse(raw_control_log || "[]");
                                                             const speed = MeanSample(controlLog.map(i => +i?.speed || 0));
                                                             return speed.toFixed(0);
                                                         })(a.control_log)
@@ -559,7 +559,7 @@ export default function UserDetail({ userInfoFromServer, logInfoFromServer }) {
                                                     data: logInfoFromServer.map(a => ({
                                                         x: new Date(a.date_of_start),
                                                         y: ((raw_control_log, logItem) => {
-                                                            const controlLog = JSON.parse(raw_control_log);
+                                                            const controlLog = JSON.parse(raw_control_log || "[]");
                                                             const distance = +controlLog[controlLog.length - 1]?.distance || 0;
                                                             const weight = logItem?.weight || 0;
                                                             return (distance * weight * 1.036).toFixed(0);
@@ -572,7 +572,7 @@ export default function UserDetail({ userInfoFromServer, logInfoFromServer }) {
                                                     data: logInfoFromServer.map(a => ({
                                                         x: new Date(a.date_of_start),
                                                         y: (raw_control_log => {
-                                                            const controlLog = JSON.parse(raw_control_log);
+                                                            const controlLog = JSON.parse(raw_control_log || "[]");
                                                             const heartRate = MeanSample(controlLog.map(i => +i?.heartRate || 0));
                                                             return heartRate.toFixed(0);
                                                         })(a.control_log)
