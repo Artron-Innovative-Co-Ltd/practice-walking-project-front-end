@@ -519,7 +519,7 @@ export default function ControlPage() {
                         }
                     </div>
                     <div className={style.controlChart}>
-                        {/*<Chart
+                        <Chart
                             options={{
                                 chart: {
                                     toolbar: {
@@ -558,7 +558,7 @@ export default function ControlPage() {
                             type="area"
                             height="100%"
                             style={{ height: "100%" }}
-                        />*/}
+                        />
                     </div>
                 </div>
             </div>
