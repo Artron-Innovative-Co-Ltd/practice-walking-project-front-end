@@ -472,7 +472,8 @@ export default function ControlPage() {
                                 onChangeCommitted={speedChangeCommittedHandle}
                                 valueLabelDisplay="auto"
                                 min={0}
-                                max={10}
+                                max={2}
+                                step={0.1}
                                 onDragEnter={startSpeedChangeHandle}
                             />}
                         </div>
